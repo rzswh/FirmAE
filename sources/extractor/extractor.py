@@ -448,9 +448,9 @@ class ExtractionItem(object):
                 for entry in module.results:
                     desc = entry.description
                     dir_name = module.extractor.directory
-
+ 
                     if prev_entry and prev_entry.description == desc and \
-                            'Zlib comparessed data' in desc:
+                            ('Zlib comparessed data' in desc or 'UBI erase count' in desc):
                         continue
                     prev_entry = entry
 
@@ -562,6 +562,15 @@ class ExtractionItem(object):
                 #     self.terminate = True
                 #     return True
 
+            elif "UBI erase count" in desc:
+                self.printf(">>>> %s" % desc)
+                if os.system("ubireader_extract_images 2>&1 > /dev/null") == 0x7f00:
+                    print("ubireader_extract_images not found")
+                    return False
+                ret = os.system("ubireader_extract_images %s" % self.item)
+                if ret != 0: return False
+                # Add execution rights to executables and shell scripts
+                return True
             # TP-Link or TRX
             elif not self.get_kernel_status() and \
                 not self.get_rootfs_status() and \
@@ -690,7 +699,7 @@ class ExtractionItem(object):
         dir_name = module.extractor.directory
         desc = entry.description
         # filesystem for the netgear WNR2000 firmware (kernel in Squashfs)
-        if 'filesystem' in desc or 'archive' in desc or 'compressed' in desc:
+        if 'filesystem' in desc or 'archive' in desc or 'compressed' in desc or 'UBI' in desc:
             if dir_name:
                 self.printf(">> Recursing into %s ..." % desc)
                 count = 0

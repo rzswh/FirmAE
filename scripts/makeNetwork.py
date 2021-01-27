@@ -87,6 +87,10 @@ echo -n "Starting emulation of firmware... "
 
 echo "Done!"
 """
+def combineArchEndian(arch, endian):
+    if arch == "aarch64":
+        return arch
+    return arch + endian
 
 def mountImage(targetDir):
     loopFile = subprocess.check_output(['bash', '-c', 'source firmae.config && add_partition %s/image.raw' % targetDir]).decode().strip()
@@ -392,6 +396,14 @@ def qemuCmd(iid, network, ports, network_type, arch, endianness, qemuInitValue, 
             raise Exception("armeb currently not supported")
         else:
             raise Exception("You didn't specify a valid endianness")
+    elif arch == "aarch64":
+        qemuDisk = "-drive if=none,file=${IMAGE},format=raw,id=rootfs -device virtio-blk-device,drive=rootfs"
+        if endianness == "el":
+            qemuEnvVars = "QEMU_AUDIO_DRV=none"
+        elif endianness == "eb":
+            raise Exception("armeb currently not supported")
+        else:
+            raise Exception("You didn't specify a valid endianness")
     else:
         raise Exception("Unsupported architecture")
 
@@ -406,7 +418,7 @@ def qemuCmd(iid, network, ports, network_type, arch, endianness, qemuInitValue, 
                               'NET_INTERFACE' : network_iface,
                               'START_NET' : startNetwork(network),
                               'STOP_NET' : stopNetwork(network),
-                              'ARCHEND' : arch + endianness,
+                              'ARCHEND' : combineArchEndian(arch, endianness),
                               'QEMU_DISK' : qemuDisk,
                               'QEMU_INIT' : qemuInitValue,
                               'QEMU_NETWORK' : qemuNetworkConfig(arch, network, isUserNetwork, ports),
@@ -520,7 +532,7 @@ def inferNetwork(iid, arch, endianness, init):
 
     cmd = "timeout --preserve-status --signal SIGINT {0} ".format(TIMEOUT)
     cmd += "{0}/run.{1}.sh \"{2}\" \"{3}\" ".format(SCRIPTDIR,
-                                                    arch + endianness,
+                                                    combineArchEndian(arch, endianness),
                                                     iid,
                                                     qemuInitValue)
     cmd += " 2>&1 > /dev/null"
@@ -702,6 +714,9 @@ def archEnd(value):
         arch = "mips"
     elif tmp.startswith("arm"):
         arch = "arm"
+    elif tmp == "aarch64":
+        arch = "aarch64"
+        end = "el"
     if tmp.endswith("el"):
         end = "el"
     elif tmp.endswith("eb"):

@@ -7,7 +7,7 @@ import re
 import hashlib
 import psycopg2
 
-psql_ip = ''
+psql_ip = '127.0.0.1'
 
 def getFileHashes(infile):
     t = tarfile.open(infile)

@@ -5,7 +5,7 @@ import tarfile
 import subprocess
 import psycopg2
 
-archMap = {"MIPS64":"mips64", "MIPS":"mips", "ARM64":"arm64", "ARM":"arm", "Intel 80386":"intel", "x86-64":"intel64", "PowerPC":"ppc", "unknown":"unknown"}
+archMap = {"MIPS64":"mips64", "MIPS":"mips", "ARM aarch64": "aarch64", "ARM64":"arm64", "ARM":"arm", "Intel 80386":"intel", "x86-64":"intel64", "PowerPC":"ppc", "unknown":"unknown"}
 
 endMap = {"LSB":"el", "MSB":"eb"}
 
@@ -20,6 +20,11 @@ def getEndian(filetype):
         if filetype.find(endian) != -1:
             return endMap[endian]
     return None
+
+def combineArchEndian(arch, endian):
+    if arch in ["aarch64"] or endian is None:
+        return arch
+    return arch + endian
 
 infile = sys.argv[1]
 psql_ip = sys.argv[2]
@@ -52,7 +57,8 @@ for info in infos:
     arch = getArch(filetype)
     endian = getEndian(filetype)
     if arch and endian:
-        print(arch + endian)
+        ae = combineArchEndian(arch, endian)
+        print(ae)
         subprocess.call(["rm", "-rf", "/tmp/" + iid])
         dbh = psycopg2.connect(database="firmware",
                                user="firmadyne",
@@ -60,7 +66,7 @@ for info in infos:
                                host=psql_ip)
         cur = dbh.cursor()
         query = """UPDATE image SET arch = '%s' WHERE id = %s;"""
-        cur.execute(query % (arch+endian, iid))
+        cur.execute(query % (ae, iid))
         dbh.commit()
 
         with open("scratch/" + iid + "/fileType", "w") as f:

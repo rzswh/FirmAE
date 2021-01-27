@@ -78,6 +78,13 @@ mkdir "${IMAGE_DIR}/firmadyne/"
 mkdir "${IMAGE_DIR}/firmadyne/libnvram/"
 mkdir "${IMAGE_DIR}/firmadyne/libnvram.override/"
 
+# SWH: Make sure those tools exists!
+if [ -z $(which busybox) ]; then
+  echo "No busybox installed"
+fi
+if [ -z $(which bash-static) ]; then
+  echo "No bash-static installed"
+fi
 cp $(which busybox) "${IMAGE_DIR}"
 cp $(which bash-static) "${IMAGE_DIR}"
 echo "----Finding Init (chroot)----"
@@ -107,6 +114,9 @@ echo "----Setting up FIRMADYNE----"
 for BINARY_NAME in "${BINARIES[@]}"
 do
     BINARY_PATH=`get_binary ${BINARY_NAME} ${ARCH}`
+    if [ ! -e ${BINARY_PATH} ]; then
+	continue
+    fi
     cp "${BINARY_PATH}" "${IMAGE_DIR}/firmadyne/${BINARY_NAME}"
     chmod a+x "${IMAGE_DIR}/firmadyne/${BINARY_NAME}"
 done

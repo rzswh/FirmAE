@@ -394,6 +394,24 @@ class ExtractionItem(object):
         """
         return self.output + ".tar.gz" if self.output else None
 
+    def add_execution(self, path):
+        for root, paths, files in os.walk(path):
+            for f in files:
+                fpath = os.path.join(root, f)
+                # Test magic
+                ftype = Extractor.magic(fpath)
+                add = False
+                if ftype.startswith('ELF'):
+                    add = True
+                elif ftype.find('script, ASCII text executable') != -1:
+                    add = True
+                if add:
+                    os.chmod(fpath, 0o755)
+                    # self.printf("Add execution right for %s" % fpath)
+            for p in paths:
+                fpath = os.path.join(root, p)
+                self.add_execution(p)
+
     def extract(self):
         """
         Perform the actual extraction of firmware updates, recursively. Returns
@@ -569,7 +587,6 @@ class ExtractionItem(object):
                     return False
                 ret = os.system("ubireader_extract_images %s" % self.item)
                 if ret != 0: return False
-                # Add execution rights to executables and shell scripts
                 return True
             # TP-Link or TRX
             elif not self.get_kernel_status() and \
@@ -681,6 +698,8 @@ class ExtractionItem(object):
 
                     self.printf(">>>> Found Linux filesystem in %s!" % unix[1])
                     if self.output:
+                        # Add execution rights to executables and shell scripts
+                        self.add_execution(unix[1])
                         shutil.make_archive(self.output, "gztar",
                                             root_dir=unix[1])
                     else:
